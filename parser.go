@@ -6,14 +6,24 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"strings"
 
 	zglob "github.com/mattn/go-zglob"
 )
 
-var exp1 = regexp.MustCompile(`(?s)<FormattedMessage.*?id='(.*?)'.*?defaultMessage=(.*?)[\s]*?/>`)
+var expJSX = []*regexp.Regexp{
+	regexp.MustCompile(`(?s)<FormattedMessage.*?id='(.*?)'.*?defaultMessage=(.*?)[\s]*?/>`),
+	regexp.MustCompile(`(?s)<FormattedHTMLMessage.*?id='(.*?)'.*?defaultMessage=(.*?)[\s]*?/>`),
+	regexp.MustCompile(`(?s)Utils.localizeMessage\('(.*?)', '(.*?)'\)`),
+}
 
-func parseI18N() (map[string]string, error) {
-	path := "./platform/webapp/i18n/en.json"
+var expGo = []*regexp.Regexp{
+	regexp.MustCompile(`utils.T\("(.*?)"`),
+	regexp.MustCompile(`c.T\("(.*?)"`),
+	regexp.MustCompile(`model.NewLocAppError\(".*?", "(.*?)"`),
+}
+
+func parseFrontI18N(path string) (map[string]string, error) {
 	b, err := readFile(path)
 	if err != nil {
 		return nil, err
@@ -24,6 +34,18 @@ func parseI18N() (map[string]string, error) {
 	return ret, nil
 }
 
+func parseServerI18N(path string) ([]map[string]interface{}, error) {
+	b, err := readFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var ret []map[string]interface{}
+	json.Unmarshal(b, &ret)
+	return ret, nil
+
+}
+
 func parseJSX() ([]Message, error) {
 	matches, err := zglob.Glob(`./platform/webapp/**/*.jsx`)
 	if err != nil {
@@ -32,26 +54,59 @@ func parseJSX() ([]Message, error) {
 	var messages []Message
 	for _, v := range matches {
 		fmt.Printf("Parsing %s\n", v)
-		for _, r := range []regexp.Regexp{*exp1} {
-			m, err := parse(v, r)
-			if err != nil {
-				return nil, err
+		for _, e := range expJSX {
+			for _, r := range []regexp.Regexp{*e} {
+				m, err := parse(v, r, true)
+				if err != nil {
+					return nil, err
+				}
+				messages = append(messages, m...)
 			}
-			messages = append(messages, m...)
+		}
+	}
+
+	return messages, nil
+}
+
+func parseGo() ([]Message, error) {
+	matches, err := zglob.Glob(`./platform/**/*.go`)
+	if err != nil {
+		return nil, err
+	}
+	var messages []Message
+	for _, v := range matches {
+		if strings.Contains(v, "/vendor/") {
+			continue
+		}
+
+		fmt.Printf("Parsing %s\n", v)
+		for _, e := range expGo {
+			for _, r := range []regexp.Regexp{*e} {
+				m, err := parse(v, r, false)
+				if err != nil {
+					return nil, err
+				}
+				messages = append(messages, m...)
+			}
 		}
 	}
 	return messages, nil
 }
 
-func parse(path string, exp regexp.Regexp) ([]Message, error) {
-	b, err := readFile(path)
+func parse(path string, exp regexp.Regexp, hasDefaultMesssage bool) ([]Message, error) {
+	f, err := readFile(path)
 	if err != nil {
 		return nil, err
 	}
 	var messages []Message
-	for _, b := range exp.FindAllSubmatch(b, -1) {
-		v := string(b[2])
-		messages = append(messages, Message{ID: string(b[1]), DefaultMessage: v[1 : len(v)-1]})
+	for _, b := range exp.FindAllSubmatch(f, -1) {
+		m := Message{}
+		m.ID = string(b[1])
+		if hasDefaultMesssage {
+			v := string(b[2])
+			m.DefaultMessage = v[1 : len(v)-1]
+		}
+		messages = append(messages, m)
 	}
 	return messages, nil
 }
