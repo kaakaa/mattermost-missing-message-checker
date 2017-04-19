@@ -1,0 +1,16 @@
+package: github.com/kaakaa/mattermost-missing-message-checker
+import:
+- package: github.com/mattermost/platform
+  subpackages:
+  - api
+  - einterfaces
+  - manualtesting
+  - model
+  - model/gitlab
+  - store
+  - utils
+  - web
+- package: github.com/mattermost/rsc
+  subpackages:
+  - qr
+- package: github.com/mattn/go-zglob
