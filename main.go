@@ -5,6 +5,11 @@ import (
 	"os"
 )
 
+var (
+	serverMessageFilePath = "./mattermost-server/i18n/en.json"
+	webappMessageFilePath = "./mattermost-webapp/i18n/en.json"
+)
+
 type Message struct {
 	ID             string
 	DefaultMessage string
@@ -21,7 +26,7 @@ func main() {
 }
 
 func parseFront() {
-	jsonMessage, err := parseFrontI18N("./platform/webapp/i18n/en.json")
+	jsonMessage, err := parseFrontI18N(webappMessageFilePath)
 	if err != nil {
 		panic(err)
 	}
@@ -34,7 +39,7 @@ func parseFront() {
 }
 
 func parseServer() {
-	jsonMessage, err := parseServerI18N("./platform/i18n/en.json")
+	jsonMessage, err := parseServerI18N(serverMessageFilePath)
 	if err != nil {
 		panic(err)
 	}

@@ -11,6 +11,11 @@ import (
 	zglob "github.com/mattn/go-zglob"
 )
 
+var (
+	serverSourceFilePattern = "./mattermost-server/**/*.go"
+	webappSourceFilePattern = "./mattermost-webapp/**/*.jsx"
+)
+
 var expJSX = []*regexp.Regexp{
 	regexp.MustCompile(`(?s)<FormattedMessage.*?id='(.*?)'.*?defaultMessage=(.*?)[\s]*?/>`),
 	regexp.MustCompile(`(?s)<FormattedHTMLMessage.*?id='(.*?)'.*?defaultMessage=(.*?)[\s]*?/>`),
@@ -47,7 +52,7 @@ func parseServerI18N(path string) ([]map[string]interface{}, error) {
 }
 
 func parseJSX() ([]Message, error) {
-	matches, err := zglob.Glob(`./platform/webapp/**/*.jsx`)
+	matches, err := zglob.Glob(webappSourceFilePattern)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +74,7 @@ func parseJSX() ([]Message, error) {
 }
 
 func parseGo() ([]Message, error) {
-	matches, err := zglob.Glob(`./platform/**/*.go`)
+	matches, err := zglob.Glob(serverSourceFilePattern)
 	if err != nil {
 		return nil, err
 	}
