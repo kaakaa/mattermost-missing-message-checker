@@ -1,0 +1,3 @@
+[submodule "mattermost-mobile"]
+	path = mattermost-mobile
+	url = https://github.com/mattermost/mattermost-mobile

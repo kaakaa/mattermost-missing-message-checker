@@ -11,15 +11,18 @@ import (
 	zglob "github.com/mattn/go-zglob"
 )
 
-var (
-	serverSourceFilePattern = "./mattermost-server/**/*.go"
-	webappSourceFilePattern = "./mattermost-webapp/**/*.jsx"
-)
-
 var expJSX = []*regexp.Regexp{
 	regexp.MustCompile(`(?s)<FormattedMessage.*?id='(.*?)'.*?defaultMessage=(.*?)[\s]*?/>`),
 	regexp.MustCompile(`(?s)<FormattedHTMLMessage.*?id='(.*?)'.*?defaultMessage=(.*?)[\s]*?/>`),
 	regexp.MustCompile(`(?s)Utils.localizeMessage\('(.*?)', '(.*?)'\)`),
+}
+
+var expRN = []*regexp.Regexp{
+	regexp.MustCompile(`(?s)formatMessage\(.*?id='(.*?)'.*?defaultMessage=(.*?)[\s]*?\)`),
+	regexp.MustCompile(`(?s)formatMessage\(.*?id:.*?'(.*?)'.*?defaultMessage:.*?(.*?)[\s]*?\)`),
+	regexp.MustCompile(`(?s)placeholder={.*?id:.*?'(.*?)'.*?defaultMessage:.*?(.*?)[\s]*?}`),
+	regexp.MustCompile(`(?s)\(.*?id:.*?'(.*?)'.*?defaultMessage:.*?(.*?)[\s]*?\)`),
+	regexp.MustCompile(`(?s){.*?id:.*?'(.*?)'.*?defaultMessage:.*?(.*?)[\s]*?}`),
 }
 
 var expGo = []*regexp.Regexp{
@@ -51,8 +54,8 @@ func parseServerI18N(path string) ([]map[string]interface{}, error) {
 
 }
 
-func parseJSX() ([]Message, error) {
-	matches, err := zglob.Glob(webappSourceFilePattern)
+func parseJSX(filePathPattern string) ([]Message, error) {
+	matches, err := zglob.Glob(filePathPattern)
 	if err != nil {
 		return nil, err
 	}
@@ -73,8 +76,30 @@ func parseJSX() ([]Message, error) {
 	return messages, nil
 }
 
-func parseGo() ([]Message, error) {
-	matches, err := zglob.Glob(serverSourceFilePattern)
+func parseRN(filePathPattern string) ([]Message, error) {
+	matches, err := zglob.Glob(filePathPattern)
+	if err != nil {
+		return nil, err
+	}
+	var messages []Message
+	for _, v := range matches {
+		fmt.Printf("Parsing %s\n", v)
+		for _, e := range expRN {
+			for _, r := range []regexp.Regexp{*e} {
+				m, err := parse(v, r, true)
+				if err != nil {
+					return nil, err
+				}
+				messages = append(messages, m...)
+			}
+		}
+	}
+
+	return messages, nil
+}
+
+func parseGo(filePathPattern string) ([]Message, error) {
+	matches, err := zglob.Glob(filePathPattern)
 	if err != nil {
 		return nil, err
 	}

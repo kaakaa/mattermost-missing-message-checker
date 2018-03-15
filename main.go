@@ -2,12 +2,20 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 )
 
 var (
 	serverMessageFilePath = "./mattermost-server/i18n/en.json"
 	webappMessageFilePath = "./mattermost-webapp/i18n/en.json"
+	mobileMessageFilePath = "./mattermost-mobile/assets/base/i18n/en.json"
+)
+
+var (
+	serverSourceFilePattern = "./mattermost-server/**/*.go"
+	webappSourceFilePattern = "./mattermost-webapp/**/*.jsx"
+	mobileSourceFilePattern = "./mattermost-mobile/**/*.js"
 )
 
 type Message struct {
@@ -23,6 +31,7 @@ type Diff struct {
 func main() {
 	parseFront()
 	parseServer()
+	parseMobile()
 }
 
 func parseFront() {
@@ -30,7 +39,9 @@ func parseFront() {
 	if err != nil {
 		panic(err)
 	}
-	jsxMessage, err := parseJSX()
+	jsxMessage, err := parseJSX(webappSourceFilePattern)
+	log.Println("hogehoge2")
+	log.Println(len(jsxMessage))
 	if err != nil {
 		panic(err)
 	}
@@ -38,12 +49,27 @@ func parseFront() {
 	write(jsxResult, "webi18n.json")
 }
 
+func parseMobile() {
+	jsonMessage, err := parseFrontI18N(mobileMessageFilePath)
+	if err != nil {
+		panic(err)
+	}
+	jsxMessage, err := parseRN(mobileSourceFilePattern)
+	log.Println("hogehoge")
+	log.Println(len(jsxMessage))
+	if err != nil {
+		panic(err)
+	}
+	jsxResult := mergeFront(jsonMessage, jsxMessage)
+	write(jsxResult, "mobile18n.json")
+}
+
 func parseServer() {
 	jsonMessage, err := parseServerI18N(serverMessageFilePath)
 	if err != nil {
 		panic(err)
 	}
-	goMessage, err := parseGo()
+	goMessage, err := parseGo(serverSourceFilePattern)
 	if err != nil {
 		panic(err)
 	}
